@@ -35,13 +35,17 @@ class GpsMapAppState extends State<GpsMapApp> {
   final Completer<GoogleMapController> _controller =
       Completer<GoogleMapController>();
 
-  static const CameraPosition _kGooglePlex = CameraPosition(
-    // 위도 & 경도
-    target: LatLng(37.42796133580664, -122.085749655962),
-    zoom: 14.4746,
-  );
+  // static const CameraPosition _kGooglePlex = CameraPosition(
+  //   // 위도 & 경도
+  //   target: LatLng(37.42796133580664, -122.085749655962),
+  //   zoom: 14.4746,
+  // );
 
   CameraPosition? _initialCameraPosition;
+
+  int _polylineIdCounter = 0;
+  Set<Polyline> _polylines = {};
+  LatLng? _prevPosition;
 
   @override
   void initState() {
@@ -58,9 +62,26 @@ class GpsMapAppState extends State<GpsMapApp> {
     setState(() {});
 
     final localtionSettings = LocationSettings();
-    print('LocationSettings $localtionSettings}');
+    // print('LocationSettings $localtionSettings}');
     Geolocator.getPositionStream(locationSettings: localtionSettings)
-    .listen((Position position) {
+        .listen((Position position) {
+      _polylineIdCounter++;
+      final polylineId = PolylineId('$_polylineIdCounter');
+      final polyline = Polyline(
+        polylineId: polylineId,
+        color: Colors.red,
+        width: 3, // 선 굵기
+        points: [
+          _prevPosition ?? _initialCameraPosition!.target,
+          LatLng(position.latitude, position.longitude)
+        ],
+      );
+
+      setState(() {
+        _polylines.add(polyline);
+        _prevPosition = LatLng(position.latitude, position.longitude);
+      });
+
       _moveCamera(position);
     });
   }
@@ -76,6 +97,7 @@ class GpsMapAppState extends State<GpsMapApp> {
               onMapCreated: (GoogleMapController controller) {
                 _controller.complete(controller);
               },
+              polylines: _polylines,
             ),
       // floatingActionButton: FloatingActionButton.extended(
       //   onPressed: _goToTheLake,
@@ -89,7 +111,7 @@ class GpsMapAppState extends State<GpsMapApp> {
     final GoogleMapController controller = await _controller.future;
     final position = await Geolocator.getCurrentPosition();
     final cameraPosition = CameraPosition(
-        target: LatLng(position.longitude, position.latitude), zoom: 20);
+        target: LatLng(position.latitude, position.longitude), zoom: 17);
     await controller
         .animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
   }
@@ -98,9 +120,9 @@ class GpsMapAppState extends State<GpsMapApp> {
     final GoogleMapController controller = await _controller.future;
     // final position = await Geolocator.getCurrentPosition();
     final cameraPosition = CameraPosition(
-        target: LatLng(position.longitude, position.latitude), zoom: 20);
+        target: LatLng(position.latitude, position.longitude), zoom: 17);
     print('position.longitude : ${position.longitude}');
-    print('position.longitude : ${position.latitude}');
+    print('position.latitude : ${position.latitude}');
     await controller
         .animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
   }
